@@ -1,94 +1,66 @@
 #include "main.h"
-#include <stdarg.h>
-#include <stdlib.h>
+
+void print_buffer(char buffer[], int *buff_ind);
+
 /**
- * int_buffer - initialize the output
- * Return: a struct
+ * _printf - Printf function
+ * @format: format.
+ * Return: Printed chars.
  */
-
-buffer_t *init_buffer(void)
-{
-        buffer_t *output;
-
-        output = (buffer_t*)malloc(sizeof(buffer_t));
-        if (output == NULL)
-                return (NULL);
-
-        output->buffer = (char*)malloc(sizeof(char) * 1024);
-        if (output->buffer == NULL)
-        {
-                free(output);
-                return (NULL);
-        }
-
-        output->start = output->buffer;
-        output->len = 0;
-
-        return (output);
-}
-/**
- * run_printf - run the printf
- * @format: a string of characters with format
- * @args: list arguments
- * @output: a struct containing the output
- * Return: the returnval
- */
-
-int run_printf(const char *format, va_list args, buffer_t *output)
-{
-        int i, returnVal = 0;
-        char tmp;
-        unsigned char len;
-        unsigned int (*f)(va_list, buffer_t *);
-        
-        for (i = 0; format[i]; i++)
-        {
-                len = 0;
-                if (format[i] == '%')
-                {
-                        tmp = 0;
-                        f = handle_specifiers(format + i + tmp + 1);
-                        if (f != NULL)
-                        {
-                                i += tmp + 1;
-                                returnVal += f(args, output);
-                                continue;
-                        }
-                        else if (format[i + tmp + 1] == '\0')
-                        {
-                                returnVal = -1;
-                                break;
-                        }
-
-                }
-                returnVal += _memcpy(output, (format + i), 1);
-                i += (len != 0) ? 1 : 0;
-                
-        }
-        cleanup(args, output);
-        return (returnVal);
-}
-/**
- * _printf - prints out it's argument
- * @format: string with different formats
- * Return: returnedval
- */
-
 int _printf(const char *format, ...)
 {
-        buffer_t *output;
-        va_list args;
-        int returnValue;
+	int i, printed = 0, printed_chars = 0;
+	int flags, width, precision, size, buff_ind = 0;
+	va_list list;
+	char buffer[BUFF_SIZE];
 
-        if (format == NULL)
-                return (-1);
-        output = init_buffer();
-        if (output == NULL)
-                return (-1);
+	if (format == NULL)
+		return (-1);
 
-        va_start(args, format);
+	va_start(list, format);
 
-        returnValue = run_printf(format, args, output);
+	for (i = 0; format && format[i] != '\0'; i++)
+	{
+		if (format[i] != '%')
+		{
+			buffer[buff_ind++] = format[i];
+			if (buff_ind == BUFF_SIZE)
+				print_buffer(buffer, &buff_ind);
+			/* write(1, &format[i], 1);*/
+			printed_chars++;
+		}
+		else
+		{
+			print_buffer(buffer, &buff_ind);
+			flags = get_flags(format, &i);
+			width = get_width(format, &i, list);
+			precision = get_precision(format, &i, list);
+			size = get_size(format, &i);
+			++i;
+			printed = handle_print(format, &i, list, buffer,
+				flags, width, precision, size);
+			if (printed == -1)
+				return (-1);
+			printed_chars += printed;
+		}
+	}
 
-        return (returnValue);
+	print_buffer(buffer, &buff_ind);
+
+	va_end(list);
+
+	return (printed_chars);
+}
+
+/**
+ * print_buffer - Prints the contents of the buffer if it exist
+ * @buffer: Array of chars
+ * @buff_ind: Index at which to add next char, represents the length.
+ */
+void print_buffer(char buffer[], int *buff_ind)
+{
+	if (*buff_ind > 0)
+		write(1, &buffer[0], *buff_ind);
+
+	*buff_ind = 0;
 }
